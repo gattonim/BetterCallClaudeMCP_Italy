@@ -1,0 +1,1146 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>La Tana del Drago</title>
+</head>
+<body>
+<!-- GAME:START -->
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Inter:wght@400;600;700&display=swap');
+
+:root{
+  --oro:#e8b84b; --oro-scuro:#a8792a; --rosso:#c0392b; --pergamena:#f4ece0;
+  --fondo:#07060a; --fondo-2:#120d16;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--fondo); color:var(--pergamena);
+  font-family:'Inter',system-ui,-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased; overflow:hidden;
+}
+#gioco{
+  position:relative; width:100%; height:100dvh; min-height:100vh;
+  display:flex; align-items:center; justify-content:center;
+  background:radial-gradient(ellipse at 50% 40%, #1a1220 0%, #07060a 70%);
+  overflow:hidden; touch-action:none; user-select:none; -webkit-user-select:none;
+}
+canvas{display:block; border-radius:6px; box-shadow:0 24px 80px rgba(0,0,0,.8), 0 0 0 1px rgba(232,184,75,.18)}
+
+.velo{
+  position:absolute; inset:0; display:grid; place-items:center; padding:22px;
+  background:radial-gradient(ellipse at 50% 45%, rgba(18,13,22,.86) 0%, rgba(7,6,10,.96) 70%);
+  text-align:center; z-index:5; backdrop-filter:blur(2px);
+}
+.velo[hidden]{display:none}
+.riquadro{max-width:620px; width:100%}
+h1{
+  font-family:'Cinzel',Georgia,serif; font-weight:800; margin:0 0 6px;
+  font-size:clamp(30px,7vw,58px); letter-spacing:.03em; line-height:1.05;
+  color:var(--oro); text-shadow:0 2px 0 #4a3410, 0 0 34px rgba(232,184,75,.35);
+}
+h2{font-family:'Cinzel',Georgia,serif; font-weight:700; margin:0 0 10px; font-size:clamp(22px,5vw,36px); color:var(--oro)}
+.sotto{font-size:clamp(13px,2.4vw,16px); color:#c9bda9; margin:0 0 20px; line-height:1.55}
+.sotto em{color:#f0dcae; font-style:normal}
+.tasti{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(128px,1fr)); gap:9px;
+  margin:0 0 22px; text-align:left;
+}
+.tasto{
+  display:flex; align-items:center; gap:9px; padding:9px 11px; border-radius:8px;
+  background:rgba(255,255,255,.04); border:1px solid rgba(232,184,75,.18); font-size:12.5px; color:#d7cbb6;
+}
+kbd{
+  font-family:'Inter',sans-serif; font-weight:700; font-size:12px; color:#1a1208;
+  background:linear-gradient(#f0d999,#c9a53e); padding:4px 8px; border-radius:5px;
+  box-shadow:0 2px 0 #7d5a1c; min-width:30px; text-align:center;
+}
+button.gio{
+  font-family:'Cinzel',Georgia,serif; font-weight:700; letter-spacing:.06em;
+  font-size:clamp(15px,3vw,19px); color:#241704; cursor:pointer;
+  background:linear-gradient(180deg,#f4d78d,#d19f2e); border:0; border-radius:10px;
+  padding:13px 30px; box-shadow:0 4px 0 #7d5a1c, 0 10px 26px rgba(232,184,75,.25);
+  transition:transform .08s ease, box-shadow .08s ease;
+}
+button.gio:hover{transform:translateY(-1px); box-shadow:0 5px 0 #7d5a1c, 0 14px 30px rgba(232,184,75,.32)}
+button.gio:active{transform:translateY(3px); box-shadow:0 1px 0 #7d5a1c}
+button.gio.sec{background:linear-gradient(180deg,#4a4152,#332c3c); color:#e8dcc6; box-shadow:0 4px 0 #1d1826}
+.fila{display:flex; gap:11px; justify-content:center; flex-wrap:wrap}
+.esito{font-size:15px; color:#e8dcc6; margin:14px 0 20px; line-height:1.6}
+.esito b{color:var(--oro); font-size:22px; font-family:'Cinzel',serif}
+
+/* in verticale il quadro sta in alto e i comandi restano sotto il pollice */
+@media (orientation:portrait){
+  #gioco{align-items:flex-start; padding-top:8vh}
+}
+#touch{position:absolute; inset:0; z-index:4; pointer-events:none; display:none}
+#touch.on{display:block}
+.pad{position:absolute; bottom:16px; pointer-events:auto}
+.pad.sx{left:14px; width:186px; height:186px}
+.pad.dx{right:14px; bottom:44px}
+.pb{
+  position:absolute; width:60px; height:60px; border-radius:12px;
+  background:rgba(244,236,224,.10); border:1px solid rgba(232,184,75,.3);
+  color:#f0dcae; font-size:24px; display:grid; place-items:center; backdrop-filter:blur(3px);
+}
+.pb:active{background:rgba(232,184,75,.35)}
+.pb.su{left:63px; top:0} .pb.giu{left:63px; top:126px}
+.pb.sinistra{left:0; top:63px} .pb.destra{left:126px; top:63px}
+.pb.spada{position:relative; width:92px; height:92px; border-radius:50%; font-size:15px; font-weight:700; font-family:'Cinzel',serif}
+.nota{margin-top:16px; font-size:11.5px; color:#8a7f6d}
+</style>
+
+<div id="gioco">
+  <canvas id="tela"></canvas>
+
+  <div class="velo" id="veloMenu">
+    <div class="riquadro">
+      <h1>La Tana del Drago</h1>
+      <p class="sotto">
+        Il cavaliere <em>Dirk l'Ardito</em> scende nelle segrete del castello di Mordroc
+        per strappare la <em>Principessa Dafne</em> alle fauci del drago.<br>
+        Un istante di esitazione e sarà cenere: al lampo dorato, <em>premi il tasto giusto</em>.
+      </p>
+      <div class="tasti">
+        <div class="tasto"><kbd>&#8592;</kbd><kbd>&#8594;</kbd> schiva ai lati</div>
+        <div class="tasto"><kbd>&#8593;</kbd> salta / arrampica</div>
+        <div class="tasto"><kbd>&#8595;</kbd> abbassati / tuffati</div>
+        <div class="tasto"><kbd>Spazio</kbd> spada</div>
+      </div>
+      <div class="fila"><button class="gio" id="btnGioca">Impugna la spada</button></div>
+      <p class="nota">Anche <b>WASD</b> e <b>Z</b>. Su mobile usa i comandi a schermo.</p>
+    </div>
+  </div>
+
+  <div class="velo" id="veloFine" hidden>
+    <div class="riquadro">
+      <h2 id="titoloFine">Le segrete ti hanno inghiottito</h2>
+      <p class="esito" id="testoFine"></p>
+      <div class="fila">
+        <button class="gio" id="btnRigioca">Riprova</button>
+        <button class="gio sec" id="btnMenu">Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="touch">
+    <div class="pad sx">
+      <div class="pb su" data-c="SU">&#8593;</div>
+      <div class="pb giu" data-c="GIU">&#8595;</div>
+      <div class="pb sinistra" data-c="SX">&#8592;</div>
+      <div class="pb destra" data-c="DX">&#8594;</div>
+    </div>
+    <div class="pad dx"><div class="pb spada" data-c="SPADA">SPADA</div></div>
+  </div>
+</div>
+<script>
+/* ============================================================
+   La Tana del Drago — omaggio ai laserdisc game anni '80.
+   Tutto disegnato a runtime su canvas: nessun asset esterno.
+   ============================================================ */
+(() => {
+'use strict';
+
+const L = 960, A = 600;                     // larghezza/altezza del palco
+const tela = document.getElementById('tela');
+const c = tela.getContext('2d');
+
+/* ---------- adattamento schermo ---------- */
+let scala = 1;
+function adatta() {
+  const box = document.getElementById('gioco');
+  const marg = window.innerWidth < 700 ? 8 : 28;
+  scala = Math.min((box.clientWidth - marg) / L, (box.clientHeight - marg) / A);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  tela.style.width = (L * scala) + 'px';
+  tela.style.height = (A * scala) + 'px';
+  tela.width = Math.round(L * scala * dpr);
+  tela.height = Math.round(A * scala * dpr);
+  c.setTransform(scala * dpr, 0, 0, scala * dpr, 0, 0);
+}
+window.addEventListener('resize', adatta);
+
+/* ---------- utilità ---------- */
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * clamp(t, 0, 1);
+const facile = t => t * t * (3 - 2 * t);                 // smoothstep
+const fuori = t => 1 - Math.pow(1 - clamp(t, 0, 1), 3);  // ease-out cubica
+const caso = (a, b) => a + Math.random() * (b - a);
+function mischia(v) {
+  const a = v.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+/* ---------- audio sintetico ---------- */
+let ac = null;
+function audio() {
+  if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+  if (ac.state === 'suspended') ac.resume();
+  return ac;
+}
+function nota(f, dur, tipo = 'square', vol = .08, ritardo = 0, f2 = null) {
+  const x = audio(); if (!x) return;
+  const t0 = x.currentTime + ritardo;
+  const o = x.createOscillator(), g = x.createGain();
+  o.type = tipo; o.frequency.setValueAtTime(f, t0);
+  if (f2) o.frequency.exponentialRampToValueAtTime(Math.max(1, f2), t0 + dur);
+  g.gain.setValueAtTime(0, t0);
+  g.gain.linearRampToValueAtTime(vol, t0 + .012);
+  g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+  o.connect(g); g.connect(x.destination); o.start(t0); o.stop(t0 + dur + .05);
+}
+function rumore(dur = .3, vol = .10) {
+  const x = audio(); if (!x) return;
+  const n = Math.floor(x.sampleRate * dur), buf = x.createBuffer(1, n, x.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2);
+  const s = x.createBufferSource(), g = x.createGain(), f = x.createBiquadFilter();
+  f.type = 'lowpass'; f.frequency.value = 1100;
+  g.gain.value = vol; s.buffer = buf; s.connect(f); f.connect(g); g.connect(x.destination); s.start();
+}
+const Suoni = {
+  richiamo: () => { nota(1180, .10, 'square', .07); nota(1580, .10, 'square', .05, .07); },
+  bene:     () => { [660, 880, 1180].forEach((f, i) => nota(f, .13, 'triangle', .08, i * .06)); },
+  male:     () => { nota(300, .5, 'sawtooth', .09, 0, 60); rumore(.45, .10); },
+  morte:    () => { [440, 360, 280, 190].forEach((f, i) => nota(f, .3, 'sawtooth', .09, i * .14)); rumore(.7, .09); },
+  vittoria: () => { [523, 659, 784, 1046, 1318].forEach((f, i) => nota(f, .34, 'triangle', .09, i * .13)); },
+  colpo:    () => { nota(180, .14, 'square', .09, 0, 70); rumore(.14, .07); },
+  passo:    () => nota(120, .05, 'square', .03)
+};
+
+/* ---------- ingressi ---------- */
+const MAPPA = {
+  ArrowUp: 'SU', KeyW: 'SU', ArrowDown: 'GIU', KeyS: 'GIU',
+  ArrowLeft: 'SX', KeyA: 'SX', ArrowRight: 'DX', KeyD: 'DX',
+  Space: 'SPADA', KeyZ: 'SPADA', Enter: 'SPADA'
+};
+window.addEventListener('keydown', e => {
+  const cmd = MAPPA[e.code];
+  if (cmd) { e.preventDefault(); premuto(cmd); }
+}, { passive: false });
+
+const zonaTouch = document.getElementById('touch');
+if (window.matchMedia('(pointer:coarse)').matches) zonaTouch.classList.add('on');
+zonaTouch.querySelectorAll('.pb').forEach(b => {
+  const giu = e => { e.preventDefault(); premuto(b.dataset.c); };
+  b.addEventListener('touchstart', giu, { passive: false });
+  b.addEventListener('mousedown', giu);
+});
+
+/* ---------- primitive di disegno ---------- */
+function rett(x, y, w, h, col) { c.fillStyle = col; c.fillRect(x, y, w, h); }
+function cerchio(x, y, r, col) { c.beginPath(); c.arc(x, y, r, 0, 7); c.fillStyle = col; c.fill(); }
+function poly(pts, col) {
+  c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
+  c.closePath(); c.fillStyle = col; c.fill();
+}
+function grad(x0, y0, x1, y1, stop) {
+  const g = c.createLinearGradient(x0, y0, x1, y1);
+  stop.forEach(s => g.addColorStop(s[0], s[1]));
+  return g;
+}
+function testo(t, x, y, dim, col, allineo = 'center', font = "'Cinzel',Georgia,serif", peso = 700) {
+  c.font = peso + ' ' + dim + "px " + font;
+  c.textAlign = allineo; c.textBaseline = 'middle'; c.fillStyle = col; c.fillText(t, x, y);
+}
+
+/* fondale generico di sala sotterranea */
+function sala(t, tinta = '#2a1f36', tinta2 = '#0c0812', torceX = [130, 830]) {
+  c.fillStyle = grad(0, 0, 0, A, [[0, tinta], [1, tinta2]]); c.fillRect(0, 0, L, A);
+  // arcate
+  c.save(); c.globalAlpha = .35;
+  for (let i = 0; i < 5; i++) {
+    const x = 60 + i * 210;
+    c.fillStyle = '#0b0810';
+    c.beginPath(); c.moveTo(x, 430); c.lineTo(x, 210);
+    c.arc(x + 62, 210, 62, Math.PI, 0); c.lineTo(x + 124, 430); c.closePath(); c.fill();
+  }
+  c.restore();
+  // mattoni
+  c.save(); c.globalAlpha = .10; c.strokeStyle = '#cbb08a'; c.lineWidth = 2;
+  for (let y = 60; y < 440; y += 46) { c.beginPath(); c.moveTo(0, y); c.lineTo(L, y); c.stroke(); }
+  for (let y = 60; y < 440; y += 46) {
+    const off = ((y / 46) | 0) % 2 ? 55 : 0;
+    for (let x = off; x < L; x += 110) { c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + 46); c.stroke(); }
+  }
+  c.restore();
+  torceX.forEach((x, i) => torcia(x, 250, t + i * 1.7));
+}
+function torcia(x, y, t) {
+  rett(x - 5, y, 10, 40, '#3a2c1d');
+  const f = 1 + Math.sin(t * 13 + x) * .16 + Math.sin(t * 7.3) * .1;
+  const g = c.createRadialGradient(x, y - 6, 2, x, y - 6, 130 * f);
+  g.addColorStop(0, 'rgba(255,214,140,.55)'); g.addColorStop(.4, 'rgba(233,140,45,.14)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = g; c.beginPath(); c.arc(x, y - 6, 130 * f, 0, 7); c.fill();
+  poly([[x - 9, y - 2], [x, y - 34 * f], [x + 9, y - 2]], '#f2a13c');
+  poly([[x - 5, y - 2], [x, y - 20 * f], [x + 5, y - 2]], '#ffe6a3');
+}
+function pavimento(y, col = '#150f1c', col2 = '#080510') {
+  c.fillStyle = grad(0, y, 0, A, [[0, col], [1, col2]]); c.fillRect(0, y, L, A - y);
+  c.save(); c.globalAlpha = .12; c.strokeStyle = '#d4c2a4'; c.lineWidth = 2;
+  for (let i = -6; i < 14; i++) {
+    c.beginPath(); c.moveTo(L / 2 + i * 70, y); c.lineTo(L / 2 + i * 260, A); c.stroke();
+  }
+  c.restore();
+}
+function vignetta() {
+  const g = c.createRadialGradient(L / 2, A / 2, A * .35, L / 2, A / 2, A * .95);
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.75)');
+  c.fillStyle = g; c.fillRect(0, 0, L, A);
+}
+
+/* ---------- il cavaliere ---------- */
+/* posa: 'corsa','salto','abbassa','fendente','para','scarto','arrampica','nuota','cade','fermo' */
+function eroe(x, y, s, posa, t, opt = {}) {
+  const verso = opt.verso || 1;
+  c.save(); c.translate(x, y); c.scale(s * verso, s); c.rotate(opt.rot || 0);
+
+  const PELLE = '#f0c49a', ARM = '#6fb0e8', ARM2 = '#2c6699', TUN = '#c0392b', CUOIO = '#5a3d24';
+  let gamba = 0, braccio = -.5, busto = 0, altezza = 0, spadaAng = -1.15, spadaX = 12, spadaY = -46;
+
+  switch (posa) {
+    case 'corsa':  gamba = Math.sin(t * 15) * .95; braccio = Math.sin(t * 15 + 3.1) * .8 - .3; busto = .12; break;
+    case 'salto':  gamba = -.85; braccio = -2.0; busto = .2; spadaAng = -2.1; break;
+    case 'abbassa':altezza = 22; gamba = 1.35; braccio = -.1; busto = .5; spadaAng = -.2; break;
+    case 'fendente': {
+      const p = clamp(opt.p || 0, 0, 1);
+      braccio = lerp(-2.4, 1.1, fuori(p)); spadaAng = lerp(-2.6, .9, fuori(p)); busto = lerp(-.1, .3, p); gamba = .5; break;
+    }
+    case 'para':   braccio = -1.5; spadaAng = -1.75; busto = -.12; gamba = .55; break;
+    case 'scarto': busto = (opt.lato || -1) * .55; gamba = .8; braccio = -1.1; break;
+    case 'arrampica': { const p = opt.p || 0; braccio = -2.3 + Math.sin(p * 12) * .35; gamba = Math.sin(p * 12 + 2) * .7; busto = .05; break; }
+    case 'nuota':  busto = 1.35; braccio = -2.2 + Math.sin(t * 9) * .5; gamba = Math.sin(t * 9) * .8; break;
+    case 'cade':   gamba = -.4; braccio = -2.6; busto = .1; break;
+    default:       gamba = .12; braccio = -.6; busto = .02;
+  }
+  c.rotate(busto * .35);
+  c.translate(0, altezza);
+
+  const anca = -46 + altezza * .1;
+  // gambe
+  const gambaDis = (ang, col) => {
+    c.save(); c.translate(0, anca); c.rotate(ang);
+    rett(-6, 0, 12, 26, col);
+    c.translate(0, 26); c.rotate(-ang * .55);
+    rett(-6, 0, 12, 22, col === TUN ? '#8e2b20' : '#3d2a18');
+    rett(-9, 20, 19, 7, '#2b1c10');
+    c.restore();
+  };
+  gambaDis(gamba * .5 - .1, '#4a3a56');
+  gambaDis(-gamba * .5 - .1, TUN);
+
+  // mantello
+  c.save(); c.translate(-4, -60);
+  c.rotate(-.15 + Math.sin(t * 6) * .07 + (posa === 'corsa' ? .25 : 0));
+  poly([[0, 0], [-34 - (posa === 'corsa' ? 16 : 0), 40], [-16, 56], [10, 46], [12, 0]], '#8d1f2d');
+  c.restore();
+
+  // busto
+  poly([[-16, -76], [16, -76], [20, -40], [-20, -40]], ARM);
+  poly([[-16, -76], [16, -76], [17, -62], [-17, -62]], ARM2);
+  rett(-20, -44, 40, 8, CUOIO);
+  rett(-6, -44, 12, 8, '#e8b84b');
+
+  // testa + elmo
+  c.save(); c.translate(0, -86);
+  cerchio(0, 0, 15, PELLE);
+  poly([[-16, -3], [16, -3], [14, -16], [-14, -16]], ARM);
+  poly([[-16, -3], [-16, 3], [-9, 3], [-9, -3]], ARM2);
+  cerchio(6, 2, 2.4, '#241a12');
+  poly([[-2, -16], [4, -16], [16, -40], [2, -22]], '#e04a3a'); // pennacchio
+  c.restore();
+
+  // braccio + spada
+  c.save(); c.translate(10, -68); c.rotate(braccio);
+  rett(-5, 0, 10, 30, ARM); c.translate(0, 30); rett(-5, 0, 10, 14, PELLE);
+  c.translate(0, 10); c.rotate(spadaAng + 1.2);
+  rett(-3, -8, 6, 12, '#e8b84b'); rett(-11, -8, 22, 5, '#e8b84b');
+  const lama = grad(0, -8, 0, -76, [[0, '#ffffff'], [.5, '#cfe0ee'], [1, '#8fa7bb']]);
+  c.fillStyle = lama; c.beginPath();
+  c.moveTo(-4, -8); c.lineTo(4, -8); c.lineTo(3, -70); c.lineTo(0, -80); c.lineTo(-3, -70); c.closePath(); c.fill();
+  c.restore();
+
+  // braccio anteriore
+  c.save(); c.translate(-9, -68); c.rotate(braccio * .5 + .3);
+  rett(-5, 0, 10, 28, ARM2); c.translate(0, 28); rett(-5, 0, 9, 12, PELLE);
+  c.restore();
+  c.restore();
+}
+
+/* la principessa, per intro e finale */
+function dafne(x, y, s, t) {
+  c.save(); c.translate(x, y); c.scale(s, s);
+  const on = Math.sin(t * 2) * .04;
+  c.rotate(on);
+  poly([[-30, 0], [30, 0], [16, -70], [-16, -70]], '#e8579b');
+  poly([[-16, -70], [16, -70], [14, -96], [-14, -96]], '#f4a0c8');
+  cerchio(0, -112, 16, '#f6cba6');
+  poly([[-20, -118], [20, -118], [26, -150], [0, -128], [-26, -150]], '#e8b84b');
+  c.beginPath(); c.moveTo(-16, -120); c.quadraticCurveTo(-34, -84, -20, -50);
+  c.quadraticCurveTo(-8, -80, -6, -118); c.fillStyle = '#f0c24b'; c.fill();
+  c.beginPath(); c.moveTo(16, -120); c.quadraticCurveTo(34, -84, 20, -50);
+  c.quadraticCurveTo(8, -80, 6, -118); c.fillStyle = '#f0c24b'; c.fill();
+  c.restore();
+}
+
+/* ============================================================
+   I QUADRI (scene). Ogni quadro ha un solo istante decisivo.
+   S = { t, fase:'attesa'|'cue'|'ok'|'ko', tf, scena }
+   ============================================================ */
+
+function avanza(S, x0 = 170, x1 = 460) { return lerp(x0, x1, facile(clamp(S.t / S.scena.cue, 0, 1))); }
+function scintille(x, y, tf, n = 16, col = '#ffe6a3', vel = 260) {
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * 6.283 + i, d = vel * tf * (.5 + (i % 5) / 5);
+    const px = x + Math.cos(a) * d, py = y + Math.sin(a) * d + 300 * tf * tf;
+    c.globalAlpha = clamp(1 - tf * 1.8, 0, 1);
+    cerchio(px, py, 3.2, col);
+  }
+  c.globalAlpha = 1;
+}
+function schizzi(x, y, tf, col = '#7fd4e8') { scintille(x, y, tf, 22, col, 200); }
+
+const QUADRI = [
+{
+  id: 'ponte', nome: 'Il Ponte Crollante', tasto: 'SU', etichetta: 'SALTA!', cue: 1.15, finestra: .90, uscita: 1.15,
+  disegna(S) {
+    sala(S.t, '#2b2138', '#060409', [90, 870]);
+    // baratro
+    c.fillStyle = '#040306'; c.fillRect(300, 400, 330, A - 400);
+    for (let i = 0; i < 5; i++) { c.globalAlpha = .25 - i * .04; rett(300, 400 + i * 34, 330, 30, '#1a1224'); }
+    c.globalAlpha = 1;
+    rett(0, 400, 302, 30, '#3a2f4a'); rett(0, 430, 302, A - 430, '#141021');
+    rett(628, 400, 332, 30, '#3a2f4a'); rett(628, 430, 332, A - 430, '#141021');
+    // assi del ponte
+    const crolla = S.fase === 'attesa' ? 0 : Math.max(0, S.fase === 'cue' ? S.t - S.scena.cue : S.tf + (S.scena.finestra * .3));
+    for (let i = 0; i < 6; i++) {
+      const px = 306 + i * 54, r = crolla * (1 + i * .18);
+      c.save(); c.translate(px + 24, 404 + r * r * 340); c.rotate(r * (i % 2 ? 1.5 : -1.2));
+      rett(-26, -8, 52, 16, i % 2 ? '#6b4a2c' : '#7d5834'); rett(-26, -8, 52, 4, '#96693c');
+      c.restore();
+    }
+    // tremolio prima del crollo
+    if (S.fase === 'attesa' && S.t > S.scena.cue - .5) { c.globalAlpha = .5; rett(300, 396, 330, 3, '#e8b84b'); c.globalAlpha = 1; }
+    let x = avanza(S, 150, 380), y = 404, posa = 'corsa', opt = {};
+    if (S.fase === 'ok') { const p = clamp(S.tf / .9, 0, 1); x = lerp(380, 720, p); y = 404 - Math.sin(p * Math.PI) * 190; posa = 'salto'; }
+    else if (S.fase === 'ko') { const p = S.tf; y = 404 + p * p * 900; x = 400 + p * 40; posa = 'cade'; opt = { rot: p * 2.4 }; }
+    eroe(x, y, .92, posa, S.t, opt);
+    vignetta();
+  }
+},
+{
+  id: 'tentacoli', nome: 'I Tentacoli della Fossa', tasto: 'SPADA', etichetta: 'COLPISCI!', cue: 1.25, finestra: .85, uscita: 1.0,
+  disegna(S) {
+    sala(S.t, '#1e3026', '#050a07', [110, 850]); pavimento(420, '#16241b', '#050a07');
+    const nasce = clamp((S.t - (S.scena.cue - .55)) / .55, 0, 1);
+    const tagliato = S.fase === 'ok' ? clamp(S.tf / .5, 0, 1) : 0;
+    const stretta = S.fase === 'ko' ? clamp(S.tf / .7, 0, 1) : 0;
+    const ex = avanza(S, 160, 430);
+    for (let i = 0; i < 4; i++) {
+      const bx = 520 + i * 105, h = (150 + i * 40) * nasce * (1 - tagliato * (i < 2 ? 1 : .3));
+      c.save(); c.translate(bx, 434);
+      c.beginPath(); c.moveTo(-20, 0);
+      for (let k = 0; k <= 10; k++) {
+        const p = k / 10, sway = Math.sin(S.t * 3.4 + i + p * 3.4) * 34 * p - stretta * p * (bx - ex - 70);
+        c.lineTo(-20 + sway + p * 6, -h * p);
+      }
+      for (let k = 10; k >= 0; k--) {
+        const p = k / 10, sway = Math.sin(S.t * 3.4 + i + p * 3.4) * 34 * p - stretta * p * (bx - ex - 70);
+        c.lineTo(20 + sway - p * 8, -h * p);
+      }
+      c.closePath(); c.fillStyle = grad(0, 0, 0, -h, [[0, '#2f6b45'], [1, '#7ad19a']]); c.fill();
+      c.restore();
+      cerchio(bx, 434, 26 * nasce, '#08120c');
+    }
+    if (S.fase === 'ok' && S.tf < .5) scintille(520, 320, S.tf, 18, '#9df0bd', 300);
+    let y = 434, posa = 'corsa', opt = {};
+    if (S.fase === 'cue') posa = 'para';
+    if (S.fase === 'ok') { posa = 'fendente'; opt = { p: S.tf / .38 }; }
+    if (S.fase === 'ko') { posa = 'cade'; y = 434 - stretta * 210; opt = { rot: -stretta * 1.1 }; }
+    eroe(ex, y, .92, posa, S.t, opt);
+    vignetta();
+  }
+},
+{
+  id: 'marea', nome: 'La Sala Allagata', tasto: 'SU', etichetta: 'ARRAMPICATI!', cue: 1.2, finestra: .95, uscita: 1.2,
+  disegna(S) {
+    sala(S.t, '#1b2a3e', '#04070c', [120, 840]);
+    // catena
+    c.strokeStyle = '#8c9aa8'; c.lineWidth = 7;
+    c.beginPath(); c.moveTo(500, 40); c.lineTo(500, 420); c.stroke();
+    for (let y = 60; y < 420; y += 26) { c.strokeStyle = '#5d6b78'; c.lineWidth = 3; c.beginPath(); c.arc(500, y, 8, 0, 7); c.stroke(); }
+    const sale = clamp((S.t - (S.scena.cue - .8)) / 1.5, 0, 1);
+    const salvo = S.fase === 'ok' ? clamp(S.tf / .9, 0, 1) : 0;
+    const perso = S.fase === 'ko' ? clamp(S.tf / 1.0, 0, 1) : 0;
+    const liv = lerp(560, 300, sale) - perso * 130;
+    let x = avanza(S, 170, 470), y = 470, posa = 'corsa', opt = {};
+    if (S.fase === 'ok') { x = 500; y = lerp(470, 190, fuori(salvo)); posa = 'arrampica'; opt = { p: salvo * 2 }; }
+    if (S.fase === 'ko') { posa = 'nuota'; y = 470 - perso * 40; opt = { rot: perso * .5 }; }
+    eroe(x, y, .92, posa, S.t, opt);
+    // acqua
+    c.save(); c.beginPath(); c.moveTo(0, liv);
+    for (let px = 0; px <= L; px += 20) c.lineTo(px, liv + Math.sin(px / 52 + S.t * 3.1) * 9 + Math.sin(px / 21 - S.t * 2) * 4);
+    c.lineTo(L, A); c.lineTo(0, A); c.closePath();
+    c.fillStyle = grad(0, liv, 0, A, [[0, 'rgba(96,190,224,.72)'], [1, 'rgba(14,52,86,.95)']]); c.fill();
+    c.restore();
+    c.globalAlpha = .5; rett(0, liv - 3, L, 3, '#cdeefc'); c.globalAlpha = 1;
+    for (let i = 0; i < 9; i++) {
+      const bx = (i * 137 + (S.t * 40) % 137) % L, by = liv + 40 + Math.sin(S.t * 2 + i) * 30;
+      c.globalAlpha = .35; cerchio(bx, by, 4 + (i % 3) * 2, '#cdeefc'); c.globalAlpha = 1;
+    }
+    vignetta();
+  }
+},
+{
+  id: 'vortice', nome: 'Il Vortice', tasto: 'DX', etichetta: 'NUOTA A DESTRA!', cue: 1.1, finestra: .9, uscita: 1.1,
+  disegna(S) {
+    c.fillStyle = grad(0, 0, 0, A, [[0, '#123047'], [1, '#03080e']]); c.fillRect(0, 0, L, A);
+    const cx = 430, cy = 340;
+    for (let i = 8; i >= 0; i--) {
+      const r = 40 + i * 42, a = S.t * (1.6 + i * .12);
+      c.save(); c.translate(cx, cy); c.rotate(a); c.scale(1, .48);
+      c.beginPath(); c.arc(0, 0, r, 0, 7); c.lineWidth = 10;
+      c.strokeStyle = 'rgba(120,200,232,' + (.08 + i * .035) + ')'; c.stroke();
+      c.restore();
+    }
+    cerchio(cx, cy, 34 + Math.sin(S.t * 6) * 5, '#03141f');
+    rett(800, 300, 160, 26, '#5a5168'); rett(800, 300, 160, 6, '#8b7fa0');
+    rett(800, 326, 160, A - 326, '#1b1526');
+    let x = avanza(S, 190, 330), y = 340, posa = 'nuota', opt = { rot: .1 };
+    if (S.fase === 'ok') { const p = fuori(clamp(S.tf / .95, 0, 1)); x = lerp(330, 790, p); y = lerp(340, 292, p); opt = { rot: .2 - p * .2 }; posa = p > .75 ? 'fermo' : 'nuota'; }
+    if (S.fase === 'ko') { const p = clamp(S.tf / 1.1, 0, 1); const a = p * 9, r = lerp(150, 8, p); x = cx + Math.cos(a) * r; y = cy + Math.sin(a) * r * .48; opt = { rot: a }; }
+    eroe(x, y, S.fase === 'ko' ? .92 * (1 - clamp(S.tf / 1.3, 0, .8)) : .92, posa, S.t, opt);
+    if (S.fase === 'ok' && S.tf < .5) schizzi(x, y, S.tf);
+    vignetta();
+  }
+},
+{
+  id: 'cavaliere', nome: 'Il Cavaliere Nero', tasto: 'SPADA', etichetta: 'PARA!', cue: 1.3, finestra: .8, uscita: 1.2,
+  disegna(S) {
+    sala(S.t, '#2c2230', '#07050a', [140, 820]); pavimento(430, '#1d1526', '#07050a');
+    const avv = lerp(880, 640, facile(clamp(S.t / S.scena.cue, 0, 1)));
+    const colpo = S.fase === 'attesa' ? 0 : clamp((S.fase === 'cue' ? S.t - S.scena.cue : S.scena.finestra) / .35, 0, 1);
+    const indietro = S.fase === 'ok' ? clamp(S.tf / .8, 0, 1) : 0;
+    // cavaliere nero
+    c.save(); c.translate(avv + indietro * 150, 434); c.scale(-1.02, 1.02);
+    c.rotate(-indietro * .5);
+    poly([[-18, -80], [18, -80], [24, -34], [-24, -34]], '#2a2a33');
+    poly([[-16, -34], [-4, -34], [-6, 0], [-18, 0]], '#1c1c24');
+    poly([[4, -34], [16, -34], [18, 0], [6, 0]], '#1c1c24');
+    c.save(); c.translate(0, -92); cerchio(0, 0, 17, '#33333d');
+    rett(-14, -4, 28, 6, '#0a0a0e'); cerchio(-5, -1, 2.6, '#ff4444'); cerchio(5, -1, 2.6, '#ff4444');
+    poly([[-4, -18], [4, -18], [0, -44]], '#6b1220'); c.restore();
+    c.save(); c.translate(12, -72); c.rotate(lerp(-2.5, .7, fuori(colpo)));
+    rett(-6, 0, 12, 34, '#33333d'); c.translate(0, 34); c.rotate(1.2);
+    rett(-13, -6, 26, 6, '#555'); c.fillStyle = grad(0, 0, 0, -84, [[0, '#b9c4cf'], [1, '#5d6b78']]);
+    c.beginPath(); c.moveTo(-5, 0); c.lineTo(5, 0); c.lineTo(3, -78); c.lineTo(0, -88); c.lineTo(-3, -78); c.closePath(); c.fill();
+    c.restore(); c.restore();
+    let posa = 'corsa', opt = {};
+    if (S.t > S.scena.cue - .45) posa = 'fermo';
+    if (S.fase === 'cue') posa = 'fermo';
+    if (S.fase === 'ok') { posa = S.tf < .45 ? 'para' : 'fendente'; opt = { p: (S.tf - .45) / .4 }; }
+    if (S.fase === 'ko') { posa = 'cade'; opt = { rot: -clamp(S.tf / .7, 0, 1) * 1.4 }; }
+    const ex = avanza(S, 160, 470) - (S.fase === 'ko' ? -clamp(S.tf, 0, 1) * -60 : 0);
+    eroe(ex, 434 + (S.fase === 'ko' ? clamp(S.tf / .7, 0, 1) * 30 : 0), .96, posa, S.t, opt);
+    if (S.fase === 'ok' && S.tf < .35) scintille(560, 350, S.tf, 20, '#fff2c2', 340);
+    vignetta();
+  }
+},
+{
+  id: 'corde', nome: 'Le Corde in Fiamme', tasto: 'DX', etichetta: 'LANCIATI!', cue: 1.2, finestra: .85, uscita: 1.2,
+  disegna(S) {
+    c.fillStyle = grad(0, 0, 0, A, [[0, '#3a1c14'], [1, '#0a0403']]); c.fillRect(0, 0, L, A);
+    // fossa di fuoco
+    for (let i = 0; i < 26; i++) {
+      const x = i * 40, h = 90 + Math.sin(S.t * 7 + i * 1.7) * 46 + Math.sin(S.t * 3 + i) * 26;
+      poly([[x, A], [x + 20, A - h], [x + 40, A]], i % 2 ? '#e8611f' : '#f2a13c');
+    }
+    c.globalAlpha = .5; rett(0, A - 150, L, 150, '#c33a10'); c.globalAlpha = 1;
+    rett(0, 380, 250, 24, '#4a3524'); rett(710, 340, 250, 24, '#4a3524');
+    const brucia = clamp((S.t - (S.scena.cue - .9)) / 1.6, 0, 1);
+    const oscilla = Math.sin(S.t * 2.2) * .5;
+    let ang = oscilla, appeso = true, x = 0, y = 0;
+    if (S.fase === 'ok') { appeso = false; }
+    if (S.fase === 'ko') { appeso = false; }
+    // corda
+    const ancX = 470, ancY = 60, len = 250;
+    c.save(); c.translate(ancX, ancY); c.rotate(appeso ? ang : oscilla);
+    c.strokeStyle = '#c9a86a'; c.lineWidth = 6;
+    c.beginPath(); c.moveTo(0, 0); c.lineTo(0, len * (1 - (S.fase === 'ko' ? clamp(S.tf, 0, 1) * .6 : 0))); c.stroke();
+    const fy = len * clamp(1 - brucia, .15, 1);
+    poly([[-12, fy], [0, fy - 34], [12, fy]], '#f2a13c'); poly([[-6, fy], [0, fy - 18], [6, fy]], '#ffe6a3');
+    c.restore();
+    if (appeso) {
+      x = ancX + Math.sin(ang) * len; y = ancY + Math.cos(ang) * len + 46;
+      eroe(x, y, .9, 'arrampica', S.t, { p: 0, rot: ang * .5 });
+    } else if (S.fase === 'ok') {
+      const p = fuori(clamp(S.tf / .95, 0, 1));
+      x = lerp(ancX + Math.sin(oscilla) * len, 830, p); y = lerp(ancY + len + 46, 344, p) - Math.sin(p * Math.PI) * 110;
+      eroe(x, y, .9, p > .8 ? 'fermo' : 'salto', S.t);
+    } else {
+      const p = clamp(S.tf, 0, 1.4);
+      eroe(ancX + Math.sin(oscilla) * len, ancY + len + 46 + p * p * 700, .9, 'cade', S.t, { rot: p * 2 });
+    }
+    vignetta();
+  }
+},
+{
+  id: 'pipistrelli', nome: 'I Pipistrelli di Pietra', tasto: 'GIU', etichetta: 'ABBASSATI!', cue: 1.05, finestra: .8, uscita: 1.0,
+  disegna(S) {
+    sala(S.t, '#241d33', '#06050a', [100, 860]); pavimento(430, '#181227', '#06050a');
+    const lancio = clamp((S.t - (S.scena.cue - .7)) / 1.5, 0, 1);
+    const ex = avanza(S, 160, 470);
+    for (let i = 0; i < 5; i++) {
+      const p = clamp(lancio - i * .05, 0, 1);
+      const bx = lerp(1010, -80, p), by = 150 + Math.sin(p * 3.3 + i) * 60 + i * 18 + (S.fase === 'ko' ? 0 : 0);
+      const ali = Math.sin(S.t * 18 + i) * .8;
+      c.save(); c.translate(bx, by); c.scale(1.1, 1.1);
+      poly([[0, 0], [-40, -18 + ali * 14], [-18, 4]], '#57506b');
+      poly([[0, 0], [40, -18 - ali * 14], [18, 4]], '#57506b');
+      cerchio(0, 0, 11, '#3b3550'); cerchio(-4, -2, 2, '#ffcf5e'); cerchio(4, -2, 2, '#ffcf5e');
+      poly([[-9, -8], [-4, -20], [-1, -8]], '#3b3550'); poly([[9, -8], [4, -20], [1, -8]], '#3b3550');
+      c.restore();
+    }
+    let posa = 'corsa', opt = {}, y = 434;
+    if (S.fase === 'cue') posa = 'fermo';
+    if (S.fase === 'ok') posa = 'abbassa';
+    if (S.fase === 'ko') { posa = 'cade'; opt = { rot: -clamp(S.tf / .6, 0, 1) * 1.5 }; y = 434 + clamp(S.tf / .6, 0, 1) * 26; }
+    eroe(ex, y, .92, posa, S.t, opt);
+    vignetta();
+  }
+},
+{
+  id: 'scala', nome: 'La Scala Sprofondante', tasto: 'SX', etichetta: 'SCARTA A SINISTRA!', cue: 1.15, finestra: .85, uscita: 1.1,
+  disegna(S) {
+    sala(S.t, '#282035', '#06050a', [80, 880]);
+    const crolla = S.fase === 'attesa' ? 0 : clamp((S.fase === 'cue' ? S.t - S.scena.cue : S.scena.finestra + S.tf) / 1.1, 0, 1);
+    rett(0, 330, 220, 20, '#4a3d5a'); rett(0, 350, 220, A - 350, '#191324');
+    for (let i = 0; i < 8; i++) {
+      const sx = 230 + i * 88, sy = 350 + i * 30;
+      c.save(); c.translate(sx, sy); c.rotate(crolla * (.25 + i * .12)); c.translate(0, crolla * crolla * (120 + i * 60));
+      rett(0, 0, 86, 22, i % 2 ? '#5b4a6d' : '#6a5880'); rett(0, 0, 86, 5, '#8471a0');
+      c.restore();
+    }
+    let x = avanza(S, 120, 400), y = 350 + clamp((x - 230) / 88, 0, 8) * 30, posa = 'corsa', opt = {};
+    if (S.fase === 'ok') { const p = fuori(clamp(S.tf / .7, 0, 1)); x = lerp(400, 150, p); y = lerp(y, 330, p) - Math.sin(p * Math.PI) * 70; posa = p > .8 ? 'fermo' : 'salto'; opt = { verso: -1 }; }
+    if (S.fase === 'ko') { const p = clamp(S.tf, 0, 1.6); y += p * p * 640; opt = { rot: p * 1.8 }; posa = 'cade'; }
+    eroe(x, y, .9, posa, S.t, opt);
+    vignetta();
+  }
+},
+{
+  id: 'lucertola', nome: 'Il Re Lucertola', tasto: 'GIU', etichetta: 'TUFFATI!', cue: 1.25, finestra: .82, uscita: 1.1,
+  disegna(S) {
+    sala(S.t, '#1f2c1d', '#050805', [110, 850]); pavimento(430, '#16211a', '#050805');
+    const sputo = S.fase === 'attesa' ? -1 : clamp((S.fase === 'cue' ? S.t - S.scena.cue : S.scena.finestra + S.tf) / .8, 0, 1);
+    // trono e re lucertola
+    rett(760, 250, 150, 190, '#3b2f22'); rett(752, 232, 166, 22, '#5a4732');
+    c.save(); c.translate(830, 430); c.scale(1.15, 1.15);
+    poly([[-46, 0], [46, 0], [34, -110], [-34, -110]], '#5f9e4a');
+    poly([[-34, -110], [34, -110], [26, -136], [-26, -136]], '#7cc061');
+    cerchio(-14, -156, 30, '#6fb054'); poly([[-44, -150], [-4, -168], [-4, -140]], '#4c8a3b');
+    cerchio(-24, -162, 4.5, '#ffe14d'); cerchio(-6, -160, 4.5, '#ffe14d');
+    for (let i = 0; i < 6; i++) poly([[-2 + i * 8, -136], [2 + i * 8, -150], [6 + i * 8, -136]], '#3f7a30');
+    rett(-58, -96, 22, 70, '#548f43');
+    c.restore();
+    if (sputo >= 0) {
+      for (let i = 0; i < 14; i++) {
+        const p = clamp(sputo - i * .03, 0, 1), px = lerp(790, 300, p), py = 280 + Math.sin(p * 2.6) * 40 + p * 60;
+        c.globalAlpha = clamp(1 - p * .4, 0, 1);
+        cerchio(px, py, 9 + (i % 4) * 3, i % 2 ? '#9be86a' : '#5fd13d');
+        c.globalAlpha = 1;
+      }
+    }
+    let posa = 'corsa', opt = {}, y = 434, x = avanza(S, 150, 430);
+    if (S.fase === 'cue') posa = 'fermo';
+    if (S.fase === 'ok') { const p = clamp(S.tf / .55, 0, 1); posa = 'abbassa'; x -= p * 40; y = 434 + p * 8; opt = { rot: -p * .3 }; }
+    if (S.fase === 'ko') { posa = 'cade'; opt = { rot: -clamp(S.tf, 0, 1) * 1.6 }; }
+    eroe(x, y, .92, posa, S.t, opt);
+    vignetta();
+  }
+},
+{
+  id: 'specchi', nome: 'La Sala degli Specchi', tasto: 'SPADA', etichetta: 'SPEZZA LO SPECCHIO!', cue: 1.3, finestra: .78, uscita: 1.1,
+  disegna(S) {
+    sala(S.t, '#1c2436', '#05070c', [90, 870]); pavimento(430, '#141a29', '#05070c');
+    const rompi = S.fase === 'ok' ? clamp(S.tf / .5, 0, 1) : 0;
+    const esce = clamp((S.t - (S.scena.cue - .7)) / 1.2, 0, 1);
+    // specchio
+    c.save(); c.translate(650, 240);
+    rett(-108, -170, 216, 340, '#6b5730'); rett(-96, -158, 192, 316, '#0e1522');
+    c.save(); c.beginPath(); c.rect(-96, -158, 192, 316); c.clip();
+    c.globalAlpha = .8;
+    eroe(0, 150, .86, 'fermo', S.t, { verso: -1 });
+    c.globalAlpha = 1;
+    c.fillStyle = 'rgba(180,220,255,.10)'; c.fillRect(-96, -158, 192, 316);
+    c.restore();
+    if (rompi > 0) {
+      for (let i = 0; i < 14; i++) {
+        const a = i * .45 + 1, d = rompi * 420 * (.4 + (i % 4) / 4);
+        c.save(); c.translate(Math.cos(a) * d, Math.sin(a) * d * .8 + rompi * rompi * 240); c.rotate(a + rompi * 5);
+        c.globalAlpha = clamp(1 - rompi * .9, 0, 1);
+        poly([[0, -18], [14, 6], [-10, 16]], '#cfe6ff'); c.globalAlpha = 1; c.restore();
+      }
+    }
+    c.restore();
+    // il doppio esce dallo specchio
+    if (S.fase !== 'ok' && esce > 0) {
+      c.save(); c.globalAlpha = .55 + esce * .35;
+      c.translate(lerp(650, 560, esce), 390);
+      c.filter = 'none';
+      c.globalCompositeOperation = 'lighter';
+      eroe(0, 0, .9, 'fendente', S.t, { verso: -1, p: esce });
+      c.globalCompositeOperation = 'source-over';
+      c.restore();
+    }
+    let posa = 'corsa', opt = {}, x = avanza(S, 150, 400);
+    if (S.fase === 'cue') posa = 'para';
+    if (S.fase === 'ok') { posa = 'fendente'; opt = { p: S.tf / .35 }; }
+    if (S.fase === 'ko') { posa = 'cade'; opt = { rot: -clamp(S.tf, 0, 1) * 1.5 }; }
+    eroe(x, 434, .92, posa, S.t, opt);
+    vignetta();
+  }
+},
+{
+  id: 'serpente', nome: 'Il Serpente di Fuoco', tasto: 'SX', etichetta: 'SCHIVA A SINISTRA!', cue: 1.1, finestra: .8, uscita: 1.05,
+  disegna(S) {
+    sala(S.t, '#331a22', '#0a0406', [120, 840]); pavimento(430, '#231218', '#0a0406');
+    const scatto = S.fase === 'attesa' ? 0 : clamp((S.fase === 'cue' ? S.t - S.scena.cue : S.scena.finestra + S.tf) / .55, 0, 1);
+    const testaX = lerp(1030, 420, fuori(scatto));
+    c.save();
+    c.beginPath(); c.moveTo(1050, 300);
+    for (let k = 0; k <= 12; k++) {
+      const p = k / 12, px = lerp(1050, testaX, p), py = 300 + Math.sin(S.t * 4 + p * 5) * 46 * (1 - p * .5);
+      c.lineTo(px, py);
+    }
+    c.lineWidth = 46; c.lineCap = 'round'; c.strokeStyle = grad(1050, 0, 300, 0, [[0, '#8a2418'], [1, '#f2751f']]); c.stroke();
+    c.lineWidth = 18; c.strokeStyle = 'rgba(255,214,140,.5)'; c.stroke();
+    c.restore();
+    c.save(); c.translate(testaX, 300 + Math.sin(S.t * 4 + 5) * 20);
+    poly([[40, -6], [-34, -34], [-40, 26], [40, 14]], '#f2913c');
+    poly([[-30, -8], [-64, -2], [-30, 6]], '#ffe6a3');
+    cerchio(6, -10, 6, '#fff'); cerchio(4, -10, 3, '#1a0c06');
+    c.restore();
+    let posa = 'corsa', opt = {}, x = avanza(S, 200, 480);
+    if (S.fase === 'cue') posa = 'fermo';
+    if (S.fase === 'ok') { const p = fuori(clamp(S.tf / .5, 0, 1)); x = lerp(480, 250, p); posa = p > .85 ? 'fermo' : 'scarto'; opt = { lato: -1, verso: -1 }; }
+    if (S.fase === 'ko') { posa = 'cade'; opt = { rot: -clamp(S.tf, 0, 1) * 1.4 }; x -= clamp(S.tf, 0, 1) * 90; }
+    eroe(x, 434, .92, posa, S.t, opt);
+    vignetta();
+  }
+}
+];
+
+/* ---------- il drago (finale in tre affondi) ---------- */
+function tanaDrago(t, S, fasedrago, liberata = false) {
+  c.fillStyle = grad(0, 0, 0, A, [[0, '#3d1a12'], [1, '#080405']]); c.fillRect(0, 0, L, A);
+  pavimento(474, '#3a2a10', '#0b0705');
+  rett(0, 452, L, 24, '#7a5c1e'); rett(0, 452, L, 6, '#a67f2b');
+  // monete del tesoro sparse sul pavimento
+  for (let i = 0; i < 54; i++) {
+    const x = (i * 97 + 30) % L, y = 484 + ((i * 53) % 96);
+    c.globalAlpha = .85; cerchio(x, y, 7 + (i % 3) * 2, i % 2 ? '#e8b84b' : '#c99a2e');
+    c.globalAlpha = .5; cerchio(x - 2, y - 2, 3, '#fff0c0'); c.globalAlpha = 1;
+  }
+  torcia(70, 210, t); torcia(890, 210, t + 1.1);
+  // colonna di riparo
+  rett(150, 120, 60, 340, '#4a3d2a'); rett(140, 108, 80, 22, '#6b5738');
+  // la principessa, rinchiusa nella nicchia
+  rett(46, 196, 150, 190, '#1a0f0c');
+  if (!liberata) { c.save(); c.translate(122, 260); c.scale(.62, .62); dafne(0, 200, 1, t); c.restore(); }
+  rett(40, 186, 162, 14, '#5f4a2a'); rett(40, 380, 162, 14, '#5f4a2a');
+  c.strokeStyle = 'rgba(214,204,182,.55)'; c.lineWidth = 5;
+  for (let i = 0; i < 7; i++) {
+    if (liberata && (i === 3 || i === 4)) continue;   // sbarre divelte
+    c.beginPath(); c.moveTo(54 + i * 22, 196); c.lineTo(54 + i * 22, 382); c.stroke();
+  }
+  if (liberata) {
+    c.save(); c.translate(150, 372); c.rotate(1.42);
+    c.beginPath(); c.moveTo(0, 0); c.lineTo(0, 170); c.stroke(); c.restore();
+  }
+}
+function drago(t, S, fasedrago) {
+  const morente = (fasedrago === 2 && S.fase === 'ok') ? clamp(S.tf / 1.8, 0, 1) : 0;
+  const respiro = Math.sin(t * 1.5) * 14;
+  const dx = 720 + Math.sin(t * 1.1) * 16 + morente * 70;
+  const dy = 300 + respiro + morente * 190;
+  const VERDE = '#4b8f3d', SCURO = '#356b2c', CHIARO = '#8ec46b';
+  c.save(); c.translate(dx, dy); c.rotate(morente * 1.05);
+
+  // coda, dietro a tutto
+  c.beginPath(); c.moveTo(60, 70);
+  for (let k = 1; k <= 12; k++) { const p = k / 12; c.lineTo(60 + p * 250, 70 + Math.sin(t * 2.4 + p * 4.2) * 70 * p + p * 40); }
+  c.lineWidth = 46; c.lineCap = 'round'; c.lineJoin = 'round'; c.strokeStyle = SCURO; c.stroke();
+  c.lineWidth = 16; c.strokeStyle = 'rgba(142,196,107,.35)'; c.stroke();
+
+  // ala membranosa
+  const battito = Math.sin(t * 2.2) * .28;
+  c.save(); c.translate(10, -40); c.rotate(-.35 + battito);
+  c.beginPath(); c.moveTo(0, 0);
+  c.quadraticCurveTo(-40, -120, -10, -215);
+  c.lineTo(46, -150); c.lineTo(58, -196); c.lineTo(104, -118); c.lineTo(126, -152);
+  c.quadraticCurveTo(150, -66, 96, -6);
+  c.closePath();
+  c.fillStyle = grad(0, -200, 0, 10, [[0, '#2f6b28'], [1, '#57a247']]); c.fill();
+  c.strokeStyle = '#264f20'; c.lineWidth = 4; c.stroke();
+  c.restore();
+
+  // corpo
+  c.beginPath(); c.ellipse(0, 20, 108, 86, -.12, 0, 7); c.fillStyle = VERDE; c.fill();
+  c.beginPath(); c.ellipse(-6, 46, 78, 46, -.08, 0, 7); c.fillStyle = CHIARO; c.fill();
+  for (let i = 0; i < 5; i++) poly([[-52 + i * 30, -58], [-40 + i * 30, -96], [-28 + i * 30, -58]], SCURO);
+
+  // zampe con artigli
+  [[-54, 74], [34, 78]].forEach(([zx, zy], i) => {
+    c.save(); c.translate(zx, zy); c.rotate(i ? .12 : -.1);
+    poly([[-26, 0], [26, 0], [20, 56], [-20, 56]], SCURO);
+    for (let k = 0; k < 3; k++) poly([[-22 + k * 16, 52], [-14 + k * 16, 52], [-16 + k * 16, 74]], '#e8dcc0');
+    c.restore();
+  });
+
+  // collo e testa
+  c.save(); c.translate(-56, -34); c.rotate(-.28 + Math.sin(t * 1.4) * .08 + morente * .9);
+  c.beginPath(); c.moveTo(10, 40); c.quadraticCurveTo(-60, 10, -118, -54);
+  c.lineWidth = 54; c.lineCap = 'round'; c.strokeStyle = VERDE; c.stroke();
+  c.lineWidth = 20; c.strokeStyle = 'rgba(142,196,107,.4)'; c.stroke();
+  c.translate(-128, -62); c.rotate(-.18);
+  // cranio
+  c.beginPath(); c.ellipse(0, 0, 52, 34, 0, 0, 7); c.fillStyle = VERDE; c.fill();
+  // muso e mascella
+  poly([[-30, -8], [-96, 2], [-92, 20], [-26, 22]], '#54a044');
+  poly([[-92, 22], [-26, 24], [-30, 38], [-84, 34]], CHIARO);
+  for (let k = 0; k < 4; k++) poly([[-84 + k * 18, 22], [-76 + k * 18, 22], [-80 + k * 18, 36]], '#fff6e0');
+  // corna
+  poly([[6, -22], [22, -76], [34, -18]], SCURO);
+  poly([[34, -16], [62, -58], [56, -6]], SCURO);
+  // occhio
+  cerchio(-16, -6, 11, morente > .3 ? '#7a7a7a' : '#ffd23f');
+  if (morente <= .3) { c.save(); c.translate(-16, -6); c.rotate(.3); c.beginPath(); c.ellipse(0, 0, 3.4, 9, 0, 0, 7); c.fillStyle = '#180a04'; c.fill(); c.restore(); }
+  poly([[-34, -18], [4, -24], [-2, -12]], SCURO);
+  c.restore();
+  c.restore();
+
+  if (S.fase === 'ok' && fasedrago === 2) scintille(dx - 120, dy - 20, S.tf, 26, '#ff8a4d', 320);
+  return { bocca: [dx - 282, dy - 4] };
+}
+
+const FASI_DRAGO = [
+  { id: 'drago0', nome: 'Il Drago — La Fiammata', tasto: 'SX', etichetta: 'AL RIPARO, A SINISTRA!', cue: 1.35, finestra: .78, uscita: 1.2 },
+  { id: 'drago1', nome: 'Il Drago — La Coda', tasto: 'SU', etichetta: 'SALTA LA CODA!', cue: 1.2, finestra: .72, uscita: 1.15 },
+  { id: 'drago2', nome: 'Il Drago — Il Cuore', tasto: 'SPADA', etichetta: 'COLPISCI IL CUORE!', cue: 1.3, finestra: .70, uscita: 2.2 }
+].map((f, i) => ({
+  ...f, boss: true, indice: i,
+  disegna(S) {
+    const t = S.t;
+    tanaDrago(t, S, i);
+    const bocca = drago(t, S, i);
+    let x = avanza(S, 300, 470), y = 470, posa = 'corsa', opt = {};
+    if (i === 0) {
+      const fiamma = S.fase === 'attesa' ? -1 : clamp((S.fase === 'cue' ? S.t - S.scena.cue : S.scena.finestra + S.tf) / .7, 0, 1);
+      if (S.fase === 'ok') { const p = fuori(clamp(S.tf / .6, 0, 1)); x = lerp(470, 185, p); posa = p > .8 ? 'para' : 'scarto'; opt = { verso: -1, lato: -1 }; }
+      if (S.fase === 'ko') { posa = 'cade'; opt = { rot: -clamp(S.tf, 0, 1) * 1.5 }; }
+      if (fiamma >= 0) {
+        const bx = bocca.bocca[0], by = bocca.bocca[1], fronte = lerp(bx, 232, fuori(fiamma));
+        const forza = .3 + .7 * Math.min(1, fiamma * 3);
+        c.save(); c.globalCompositeOperation = 'lighter';
+        for (let k = 0; k < 22; k++) {
+          const p = k / 21, px = lerp(bx, fronte, p);
+          const r = lerp(14, 64, p) * forza * (1 + Math.sin(t * 15 + k * 1.4) * .13);
+          c.globalAlpha = .24 * (1 - p * .3);
+          cerchio(px, by + Math.sin(t * 8 + k * 1.1) * 9 + p * 30, r, k % 3 ? '#ff7a1e' : '#ffd66a');
+        }
+        c.restore(); c.globalAlpha = 1;
+        // la colonna, ridisegnata sopra: la fiamma si spegne contro la pietra
+        rett(150, 120, 60, 340, S.fase === 'ok' && S.tf > .25 ? '#2a2118' : '#4a3d2a');
+        rett(140, 108, 80, 22, '#6b5738');
+
+      }
+    } else if (i === 1) {
+      const coda = S.fase === 'attesa' ? -1 : clamp((S.fase === 'cue' ? S.t - S.scena.cue : S.scena.finestra + S.tf) / .55, 0, 1);
+      if (coda >= 0) {
+        const cx = lerp(940, 120, coda);
+        c.save(); c.translate(cx, 452); c.rotate(Math.sin(coda * 3) * .2);
+        c.beginPath(); c.moveTo(-160, 0); c.lineTo(180, -14); c.lineWidth = 44; c.lineCap = 'round';
+        c.strokeStyle = '#3f7a35'; c.stroke();
+        poly([[-160, -6], [-215, -22], [-206, 16]], '#8ec46b');
+        c.restore();
+      }
+      if (S.fase === 'ok') { const p = clamp(S.tf / .85, 0, 1); y = 470 - Math.sin(p * Math.PI) * 195; posa = p > .9 ? 'fermo' : 'salto'; }
+      if (S.fase === 'ko') { posa = 'cade'; opt = { rot: clamp(S.tf, 0, 1) * 1.9 }; x += clamp(S.tf, 0, 1) * -110; }
+    } else {
+      if (S.fase === 'ok') {
+        const p = clamp(S.tf / 1.0, 0, 1);
+        x = lerp(470, 610, fuori(clamp(p * 2, 0, 1))); posa = 'fendente'; opt = { p: clamp((p - .25) / .4, 0, 1) };
+        if (p > .35) scintille(660, 300, (p - .35) / .8, 26, '#ffe6a3', 380);
+      } else if (S.fase === 'ko') { posa = 'cade'; opt = { rot: -clamp(S.tf, 0, 1) * 1.6 }; }
+      else if (S.fase === 'cue') posa = 'para';
+    }
+    eroe(x, y, .95, posa, S.t, opt);
+    vignetta();
+  }
+}));
+
+/* ============================================================
+   STATO DI GIOCO
+   ============================================================ */
+const QUADRI_PER_PARTITA = 8;
+const G = {
+  modo: 'menu',            // menu | gioco | fine
+  mazzo: [], idx: 0,
+  S: { t: 0, fase: 'attesa', tf: 0, scena: null },
+  vite: 3, punti: 0, combo: 0, ciclo: 1,
+  finestra: 1, attesaCambio: 0, lampo: 0, scossa: 0, vinto: false,
+  attrattiva: 0
+};
+const record = (() => {
+  try { return { leggi: () => +(localStorage.getItem('tanadeldrago.record') || 0), scrivi: v => localStorage.setItem('tanadeldrago.record', String(v)) }; }
+  catch (e) { let v = 0; return { leggi: () => v, scrivi: x => { v = x; } }; }
+})();
+
+function nuovaPartita(ciclo = 1) {
+  G.ciclo = ciclo;
+  if (ciclo === 1) { G.punti = 0; G.vite = 3; }
+  G.combo = 0;
+  G.mazzo = mischia(QUADRI).slice(0, QUADRI_PER_PARTITA).concat(FASI_DRAGO);
+  G.idx = 0; G.modo = 'gioco';
+  preparaQuadro();
+}
+function preparaQuadro() {
+  const sc = G.mazzo[G.idx];
+  G.S = { t: 0, fase: 'attesa', tf: 0, scena: sc };
+  const durezza = Math.pow(.972, G.idx) * Math.pow(.88, G.ciclo - 1);
+  G.finestra = Math.max(.40, sc.finestra * durezza);
+  G.attesaCambio = 0;
+}
+function premuto(cmd) {
+  audio();
+  if (G.modo !== 'gioco') return;
+  const S = G.S;
+  if (S.fase !== 'cue') return;                 // troppo presto o già risolto: ignorato
+  if (cmd === S.scena.tasto) riuscita(); else fallimento();
+}
+function riuscita() {
+  const S = G.S;
+  const trascorso = S.t - S.scena.cue;
+  const prontezza = clamp(1 - trascorso / G.finestra, 0, 1);
+  const guadagno = Math.round((100 + 120 * prontezza) * G.ciclo) + G.combo * 15;
+  G.punti += guadagno; G.combo++;
+  S.fase = 'ok'; S.tf = 0; S.premio = guadagno;
+  G.lampo = .35;
+  Suoni.bene(); if (S.scena.tasto === 'SPADA') Suoni.colpo();
+}
+function fallimento() {
+  const S = G.S;
+  if (S.fase !== 'cue') return;
+  S.fase = 'ko'; S.tf = 0; G.combo = 0; G.vite--;
+  G.scossa = .55;
+  G.vite > 0 ? Suoni.male() : Suoni.morte();
+}
+function aggiorna(dt) {
+  G.attrattiva += dt;
+  G.lampo = Math.max(0, G.lampo - dt * 2.4);
+  G.scossa = Math.max(0, G.scossa - dt * 1.6);
+  if (G.modo !== 'gioco') return;
+  const S = G.S;
+  S.t += dt;
+  if (S.fase === 'attesa') {
+    if (S.t >= S.scena.cue) { S.fase = 'cue'; S.tf = 0; Suoni.richiamo(); }
+  } else if (S.fase === 'cue') {
+    S.tf += dt;
+    if (S.tf >= G.finestra) fallimento();
+  } else {
+    S.tf += dt;
+    if (S.fase === 'ok' && S.tf >= S.scena.uscita) {
+      G.idx++;
+      if (G.idx >= G.mazzo.length) return vittoria();
+      preparaQuadro();
+    }
+    if (S.fase === 'ko' && S.tf >= 1.7) {
+      if (G.vite <= 0) return sconfitta();
+      preparaQuadro();
+    }
+  }
+}
+
+/* ============================================================
+   INTERFACCIA DISEGNATA SUL CANVAS
+   ============================================================ */
+const GLIFO = { SU: '↑', GIU: '↓', SX: '←', DX: '→', SPADA: '⚔' };
+
+function cuore(x, y, r, col) {
+  c.save(); c.translate(x, y); c.scale(r / 10, r / 10);
+  c.beginPath(); c.moveTo(0, 4);
+  c.bezierCurveTo(-12, -6, -7, -14, 0, -8);
+  c.bezierCurveTo(7, -14, 12, -6, 0, 4);
+  c.closePath(); c.fillStyle = col; c.fill(); c.restore();
+}
+function pannello(x, y, w, h, alfa = .45) {
+  c.fillStyle = 'rgba(8,6,12,' + alfa + ')';
+  c.beginPath(); c.roundRect(x, y, w, h, 10); c.fill();
+  c.strokeStyle = 'rgba(232,184,75,.28)'; c.lineWidth = 1.5; c.stroke();
+}
+function hud() {
+  const S = G.S;
+  pannello(18, 16, 176, 44);
+  for (let i = 0; i < 3; i++) cuore(48 + i * 42, 38, 15, i < G.vite ? '#e0413c' : 'rgba(255,255,255,.14)');
+  pannello(L - 234, 16, 216, 44);
+  testo('PUNTI', L - 216, 38, 13, '#a99a80', 'left', "'Inter',sans-serif", 700);
+  testo(String(G.punti).padStart(6, '0'), L - 34, 38, 22, '#e8b84b', 'right');
+  const num = G.idx + 1, tot = G.mazzo.length;
+  pannello(L / 2 - 190, 16, 380, 44);
+  testo((S.scena.boss ? '' : 'QUADRO ' + num + '/' + tot + ' · ') + S.scena.nome, L / 2, 38, 17, '#f0e2c8');
+  if (G.combo >= 2) {
+    const puls = 1 + Math.sin(G.attrattiva * 8) * .05;
+    c.save(); c.translate(L / 2, 84); c.scale(puls, puls);
+    testo('SERIE ×' + G.combo, 0, 0, 20, '#7fe0a0');
+    c.restore();
+  }
+  if (G.ciclo > 1) testo('CICLO ' + G.ciclo, 26, 82, 15, '#c98cf0', 'left');
+}
+function richiamo() {
+  const S = G.S;
+  if (S.fase !== 'cue') return;
+  const resta = clamp(1 - S.tf / G.finestra, 0, 1);
+  const su = fuori(clamp(S.tf / .16, 0, 1));
+  const puls = 1 + Math.sin(S.tf * 22) * .045;
+  // bagliore ai bordi
+  c.save(); c.globalAlpha = .30 + Math.sin(S.tf * 18) * .12;
+  c.strokeStyle = '#e8b84b'; c.lineWidth = 14; c.strokeRect(7, 7, L - 14, A - 14);
+  c.restore();
+  // il pannello si adatta alla lunghezza dell'etichetta
+  let dim = 27;
+  c.font = "700 " + dim + "px 'Cinzel',Georgia,serif";
+  let larghTesto = c.measureText(S.scena.etichetta).width;
+  const MAX = 430;
+  if (larghTesto > MAX) {
+    dim = Math.max(17, dim * MAX / larghTesto);
+    c.font = "700 " + dim + "px 'Cinzel',Georgia,serif";
+    larghTesto = c.measureText(S.scena.etichetta).width;
+  }
+  const corpo = Math.max(larghTesto, 250), w = corpo + 168;
+  const cx = L / 2, cy = 524;
+  c.save(); c.translate(cx, cy); c.scale(su * puls, su * puls);
+  pannello(-w / 2, -54, w, 108, .78);
+  // glifo
+  c.save(); c.translate(-w / 2 + 60, 0);
+  cerchio(0, 0, 36, 'rgba(232,184,75,.16)');
+  c.strokeStyle = '#e8b84b'; c.lineWidth = 3; c.beginPath(); c.arc(0, 0, 36, 0, 7); c.stroke();
+  testo(GLIFO[S.scena.tasto], 0, 2, S.scena.tasto === 'SPADA' ? 40 : 46, '#ffe6a3', 'center', "'Inter',sans-serif", 700);
+  c.restore();
+  const tx = -w / 2 + 118;
+  testo(S.scena.etichetta, tx, -14, dim, '#fff4d8', 'left');
+  // barra del tempo
+  const bw = w / 2 - 26 - tx;
+  rett(tx, 16, bw, 12, 'rgba(255,255,255,.13)');
+  c.fillStyle = resta > .45 ? '#7fe0a0' : resta > .2 ? '#e8b84b' : '#e0413c';
+  c.fillRect(tx, 16, bw * resta, 12);
+  c.restore();
+}
+function esitoScritto() {
+  const S = G.S;
+  if (S.fase === 'ok' && S.tf < .85) {
+    const a = clamp(1 - S.tf / .85, 0, 1), y = 500 - S.tf * 60;
+    c.save(); c.globalAlpha = a;
+    testo('+' + S.premio, L / 2, y, 40, '#7fe0a0');
+    c.restore();
+  }
+  if (S.fase === 'ko' && S.tf < 1.5) {
+    const a = clamp(1 - (S.tf - .8) / .7, 0, 1);
+    c.save(); c.globalAlpha = clamp(a, 0, 1) * .9;
+    testo(G.vite > 0 ? 'DIRK È CADUTO' : 'NESSUNA VITA RIMASTA', L / 2, 520, 34, '#e0413c');
+    c.restore();
+  }
+}
+function tableauVittoria(t) {
+  const S = { t, fase: 'ok', tf: 3, scena: FASI_DRAGO[2] };
+  tanaDrago(t, S, 2, true);
+  drago(t, S, 2);
+  eroe(392, 470, .95, 'fermo', t, { verso: 1 });
+  c.save(); c.translate(486, 350); c.scale(.62, .62); dafne(0, 190, 1, t + 2); c.restore();
+  const raggio = 240 + Math.sin(t * 2.2) * 18;
+  const g = c.createRadialGradient(440, 390, 10, 440, 390, raggio);
+  g.addColorStop(0, 'rgba(255,220,150,.28)'); g.addColorStop(.55, 'rgba(255,190,90,.10)');
+  g.addColorStop(1, 'rgba(255,190,90,0)');
+  c.fillStyle = g; c.beginPath(); c.arc(440, 390, raggio, 0, 7); c.fill();
+  vignetta();
+}
+function disegna() {
+  c.save();
+  if (G.scossa > 0) c.translate(caso(-1, 1) * G.scossa * 16, caso(-1, 1) * G.scossa * 12);
+  if (G.modo === 'menu') {
+    const S = { t: G.attrattiva, fase: 'attesa', tf: 0, scena: { cue: 999, finestra: 1, tasto: 'SPADA' } };
+    FASI_DRAGO[0].disegna(S);
+  } else if (G.modo === 'fine' && G.vinto) {
+    tableauVittoria(G.attrattiva);
+  } else {
+    G.S.scena.disegna(G.S);
+    hud(); richiamo(); esitoScritto();
+  }
+  c.restore();
+  if (G.lampo > 0) { c.fillStyle = 'rgba(255,240,200,' + (G.lampo * .5) + ')'; c.fillRect(0, 0, L, A); }
+  if (G.modo === 'gioco' && G.S.fase === 'ko') {
+    c.fillStyle = 'rgba(140,10,10,' + clamp(.35 - G.S.tf * .2, 0, .35) + ')'; c.fillRect(0, 0, L, A);
+  }
+}
+
+/* ============================================================
+   VELI (menu, fine partita)
+   ============================================================ */
+const veloMenu = document.getElementById('veloMenu');
+const veloFine = document.getElementById('veloFine');
+const titoloFine = document.getElementById('titoloFine');
+const testoFine = document.getElementById('testoFine');
+const btnRigioca = document.getElementById('btnRigioca');
+
+function mostraFine(vinto) {
+  G.modo = 'fine';
+  const rec = record.leggi();
+  if (G.punti > rec) record.scrivi(G.punti);
+  titoloFine.textContent = vinto ? 'La Principessa è salva!' : 'Le segrete ti hanno inghiottito';
+  testoFine.innerHTML = vinto
+    ? 'Il drago giace tra le sue monete. Dafne prende la mano di Dirk.<br><b>' + G.punti + '</b> punti · record <b>' + Math.max(rec, G.punti) + '</b>'
+    : 'Dirk cade al quadro <b>' + Math.min(G.idx + 1, G.mazzo.length) + '</b> — <em>' + G.S.scena.nome + '</em>.<br><b>' + G.punti + '</b> punti · record <b>' + Math.max(rec, G.punti) + '</b>';
+  btnRigioca.textContent = vinto ? 'Ciclo ' + (G.ciclo + 1) : 'Riprova';
+  btnRigioca.dataset.ciclo = vinto ? String(G.ciclo + 1) : '1';
+  veloFine.hidden = false;
+}
+function vittoria() { G.vinto = true; Suoni.vittoria(); mostraFine(true); }
+function sconfitta() { G.vinto = false; mostraFine(false); }
+
+document.getElementById('btnGioca').addEventListener('click', () => {
+  audio(); veloMenu.hidden = true; veloFine.hidden = true; nuovaPartita(1);
+});
+btnRigioca.addEventListener('click', () => {
+  audio(); veloFine.hidden = true;
+  const ciclo = +btnRigioca.dataset.ciclo || 1;
+  if (ciclo === 1) { G.punti = 0; G.vite = 3; }
+  nuovaPartita(ciclo);
+});
+document.getElementById('btnMenu').addEventListener('click', () => {
+  veloFine.hidden = true; veloMenu.hidden = false; G.modo = 'menu';
+});
+
+/* ============================================================
+   CICLO PRINCIPALE
+   ============================================================ */
+let ultimo = 0;
+function frame(ts) {
+  const dt = ultimo ? Math.min(.05, (ts - ultimo) / 1000) : 0;
+  ultimo = ts;
+  aggiorna(dt); disegna();
+  requestAnimationFrame(frame);
+}
+/* gancio di sola lettura per i test automatici */
+window.__tana = () => ({ modo: G.modo, quadro: G.S.scena && G.S.scena.nome, tasto: G.S.scena && G.S.scena.tasto, fase: G.S.fase, vite: G.vite, punti: G.punti });
+
+adatta();
+requestAnimationFrame(frame);
+})();
+
+</script>
+<!-- GAME:END -->
+</body>
+</html>
