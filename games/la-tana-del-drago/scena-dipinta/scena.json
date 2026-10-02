@@ -1,0 +1,35 @@
+{
+  "id": "ponte-levatoio",
+  "titolo": "Il Ponte Levatoio",
+  "intro": "Il castello di Mordroc si regge su una rupe sopra un fossato nero. L'unica via d'ingresso è un ponte di tavole marce — e qualcosa, sotto, si muove.",
+  "mossa": "SU",
+  "etichetta": "SALTA!",
+  "richiamo": { "x": 0.80, "y": 0.44 },
+  "segmenti": {
+    "approccio": {
+      "file": "assets/01-approccio.png",
+      "durata": 3.2,
+      "didascalia": "Dirk corre sul ponte levatoio",
+      "camera": { "da": [0.50, 0.52, 1.00], "a": [0.58, 0.50, 1.12] }
+    },
+    "pericolo": {
+      "file": "assets/02-pericolo.png",
+      "finestra": 0.85,
+      "scossa": 0.6,
+      "didascalia": "Le tavole cedono, il tentacolo esce dall'acqua",
+      "camera": { "da": [0.52, 0.50, 1.14], "a": [0.50, 0.50, 1.04] }
+    },
+    "riuscita": {
+      "file": "assets/03-riuscita.png",
+      "durata": 2.4,
+      "didascalia": "Il salto verso il portale",
+      "camera": { "da": [0.44, 0.54, 1.16], "a": [0.60, 0.46, 1.02] }
+    },
+    "morte": {
+      "file": "assets/04-morte.png",
+      "durata": 2.8,
+      "didascalia": "I tentacoli lo trascinano sotto",
+      "camera": { "da": [0.50, 0.44, 1.02], "a": [0.50, 0.58, 1.18] }
+    }
+  }
+}
